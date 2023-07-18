@@ -16,6 +16,6 @@ spec:
       traits:
       - type: napptive-ingress # Set to napptive-ingress      
         properties:
-          name: nginx-ingress # (Optional) endpoint name 
+          name: random-quote-generator # (Optional) endpoint name 
           port: 8080 # (Required) port  where the service is listening for incoming connections.
           path: / # (Required) path to be exposed
