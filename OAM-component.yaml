@@ -1,12 +1,13 @@
 apiVersion: core.oam.dev/v1beta1
 kind: Application
 metadata:
-  name: Random Quote Generator
+  name: my-app
   annotations:
+    version: "v0.0.1"
     description: "Random Quote Generator"
 spec:
   components:
-    - name: 
+    - name: random-quote-generator
       type: webservice
       properties:
         image: bhavyasachdeva/random-quote-generator
@@ -14,8 +15,9 @@ spec:
         - port: 8080
           expose: true
       traits:
-      - type: napptive-ingress # Set to napptive-ingress      
+      - type: napptive-ingress #Set to napptive-ingress      
         properties:
-          name: random-quote-generator # (Optional) endpoint name 
-          port: 8080 # (Required) port  where the service is listening for incoming connections.
-          path: / # (Required) path to be exposed
+          name: random-quote  
+          port: 8080
+          path: /  #(Required) path to be exposed
+
