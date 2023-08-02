@@ -1,0 +1,237 @@
+apiVersion: core.oam.dev/v1beta1
+kind: ComponentDefinition
+metadata:
+  annotations:
+    definition.oam.dev/description: Deploy the deno runner.
+  name: deno-runner
+spec:
+  schematic:
+    cue:
+      template: |
+        envs: [
+          {
+            name:  "REPO_URL"
+            value: parameter.repoUrl
+          },
+          {
+            name:  "ALLOW_NET"
+            if parameter["allowNet"] != _|_ {
+                value: "true"
+            }
+            if parameter["allowNet"] == _|_ {
+                value: ""
+            }
+          },
+          {
+            name:  "ALLOW_SYS"
+            if parameter["allowSys"] != _|_ {
+                value: "true"
+            }
+            if parameter["allowSys"] == _|_ {
+                value: ""
+            }
+          },
+          {
+            name:  "ALLOW_ENV"
+            if parameter["allowEnv"] != _|_ {
+                value: "true"
+            }
+            if parameter["allowEnv"] == _|_ {
+                value: ""
+            }
+          },
+          {
+            name:  "ALLOW_HRTIME"
+            if parameter["allowhrTime"] != _|_ {
+                value: "true"
+            }
+            if parameter["allowhrTime"] == _|_ {
+                value: ""
+            }
+          },
+          {
+            name:  "ALLOW_FFI"
+            if parameter["allowFfi"] != _|_ {
+                value: "true"
+            }
+            if parameter["allowFfi"] == _|_ {
+                value: ""
+            }
+          },
+          {
+            name:  "ALLOW_READ"
+            if parameter["allowRead"] != _|_ {
+                value: "true"
+            }
+            if parameter["allowRead"] == _|_ {
+                value: ""
+            }
+          },
+          {
+            name:  "ALLOW_WRITE"
+            if parameter["allowWrite"] != _|_ {
+                value: "true"
+            }
+            if parameter["allowWrite"] == _|_ {
+                value: ""
+            }
+          },
+          {
+            name:  "ALLOW_RUN"
+            if parameter["allowRun"] != _|_ {
+                value: "true"
+            }
+            if parameter["allowRun"] == _|_ {
+                value: ""
+            }
+          },
+          {
+            name:  "ALLOW_All"
+            if parameter["allowAll"] != _|_ {
+                value: "true"
+            }
+            if parameter["allowAll"] == _|_ {
+                value: ""
+            }
+          },
+                 
+          {
+            name:  "ENTRYPOINT"
+            value: parameter.entryPoint
+          }
+          
+
+        ]
+        exposePortsMap: {
+          for v in parameter.ports {                    
+                    "\(v.port)" : v.port,
+          }
+          for v in parameter.ingresses {                    
+                      "\(v.targetPort)" : v.targetPort,
+          }                                                                         
+        }
+        totalPorts: {
+          exposePorts: *[
+              for k, v in exposePortsMap {
+              {
+                port:       v
+                targetPort: v
+                name:       "port-" + k
+              }
+            },
+          ] | []
+        }
+        containerPorts: {
+          exposePorts: *[
+              for k, v in exposePortsMap {
+              {
+                containerPort: v
+                protocol:      "TCP"
+                name:          "port-" + k
+              }
+            },
+          ] | []
+        } 
+        output: {
+          apiVersion: "apps/v1"
+          kind:       "Deployment"
+          spec: {
+            selector: matchLabels: { "app.oam.dev/component": context.name }
+            template: {
+              metadata: labels: {
+                "app.oam.dev/name":      context.appName
+                "app.oam.dev/component": context.name
+                "app" : "deno-app"
+              }
+              spec: {
+                containers: [{
+                  name:  context.name
+                  image: "bhavyasachdeva/check-again:latest"
+                  ports: containerPorts.exposePorts
+                  env: envs
+                }]
+              }
+            }
+          }
+        }
+        outputs: {
+          if parameter["ports"] != _|_ || parameter["ingresses"] != _|_ {
+            serviceExpose: {
+              apiVersion: "v1"
+              kind:       "Service"
+              metadata: name: context.name
+              spec: {
+                      selector: "app.oam.dev/component": context.name
+                      ports: totalPorts.exposePorts
+              }
+            }
+          }
+          if parameter["ingresses"] != _|_ {
+            for v, i in parameter.ingresses {
+              "objects-\(i.targetPort)": {
+                  apiVersion: "core.napptive.com/v1alpha1"
+                  kind:       "Ingress"
+                  metadata: name: context.name 
+                  spec: {
+                          selector: "app.oam.dev/component": context.name
+                          path:              "/"
+                          port:              i.targetPort
+                          protocol:          "HTTP"
+                          targetServiceName: context.name
+                  }
+              }
+            }
+          }
+        }
+        parameter: {
+          // +usage=Github url
+          repoUrl:       string
+          // +usage=Which ports do you want customer traffic sent to, defaults to 80
+          ports: [...{
+            // +usage=Number of port to expose on the pod's IP address
+            port: int
+          }]
+         
+          // +usage=Allow Net Deno Parameter
+          allowNet?: string
+          
+          // +usage=Allow Sys
+          allowSys?: string
+
+          // +usage=Allow Environment variable
+          allowEnv?: string
+
+          // +usage="It allows HR Time"
+          allowhrTime?: string
+
+          // +usage="offtime"
+          allowffiTime?: string
+
+          // +usage="read"
+          allowRead?: string
+
+          // +usage="it allows write"
+          allowWrite?: string
+
+          // +usage="it allows run"
+          allowRun?: string
+
+          // +usage="it allows all"
+          allowAll?: string
+
+
+          // +usage=Specify the Entry Point
+          entryPoint: string
+          
+          // +usage=Which ports do you want to expose externally
+          ingresses: [...{
+            // +usage=Number of port to expose on the pod's IP address
+            targetPort: int
+          }]
+
+        }
+  workload:
+    definition:
+      apiVersion: apps/v1
+      kind: Deployment
+    type: deployments.apps

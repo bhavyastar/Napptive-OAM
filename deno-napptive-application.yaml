@@ -1,23 +1,16 @@
 apiVersion: core.oam.dev/v1beta1
-kind: Application
+kind: Application 
 metadata:
-  name: my-app
-  annotations:
-    version: "v0.0.1"
-    description: "Random Quote Generator"
+  name: deno-app
 spec:
   components:
-    - name: random-quote-generator
-      type: webservice
+    - name: deno-runner
+      type: deno-runner
       properties:
-        image: bhavyasachdeva/random-quote-generator
-        ports:
-        - port: 8080
-          expose: true
-      traits:
-      - type: napptive-ingress #Set to napptive-ingress      
-        properties:
-          name: random-quote  
-          port: 8080
-          path: /  #(Required) path to be exposed
-
+        repoUrl: https://github.com/bhavyastar/deno-napptive-demo
+        entryPoint: main.ts
+        ports: 
+          - port: 8080
+        ingresses:  
+          - targetPort: 8080
+        allowNet: "true"
